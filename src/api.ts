@@ -1,4 +1,5 @@
-const API_BASE = '/api/admin';
+const API_URL = (import.meta.env.VITE_API_URL as string | undefined)?.replace(/\/$/, '') ?? '';
+const API_BASE = API_URL ? `${API_URL}/api/admin` : '/api/admin';
 
 function getToken(): string | null {
   return localStorage.getItem('token');
@@ -39,7 +40,7 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
 
 export const api = {
   login: (email: string, password: string) =>
-    fetch('/api/admin/login', {
+    fetch(`${API_BASE}/login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email, password }),
