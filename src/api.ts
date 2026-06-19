@@ -1,5 +1,8 @@
-const API_URL = (import.meta.env.VITE_API_URL as string | undefined)?.replace(/\/$/, '') ?? '';
-const API_BASE = API_URL ? `${API_URL}/api/admin` : '/api/admin';
+const DEFAULT_API_URL = 'https://lisans-server-backend-production.up.railway.app';
+
+const API_URL = (import.meta.env.VITE_API_URL || DEFAULT_API_URL).replace(/\/$/, '');
+
+const API_BASE = `${API_URL}/api/admin`;
 
 function getToken(): string | null {
   return localStorage.getItem('token');
