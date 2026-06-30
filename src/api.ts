@@ -115,11 +115,16 @@ export const api = {
     }),
 };
 
+export type ProgramProductType = 'DESKTOP' | 'SAAS';
+
 export interface Program {
   id: string;
   appCode: string;
   name: string;
   description?: string;
+  productType: ProgramProductType;
+  targetService?: string | null;
+  saasProductCode?: string | null;
   defaultLicenseDays: number;
   defaultMaxDevices: number;
   isActive: boolean;
