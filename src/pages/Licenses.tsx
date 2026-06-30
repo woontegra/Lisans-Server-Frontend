@@ -288,7 +288,7 @@ export default function Licenses() {
                   <td>{l.customer.name}</td>
                   <td>{l.program.name}</td>
                   <td>{new Date(l.expiresAt).toLocaleDateString('tr-TR')}</td>
-                  <td>{l.activeDeviceCount}/{l.maxDevices}</td>
+                  <td>{l.program.productType === 'SAAS' ? 'SaaS' : `${l.activeDeviceCount}/${l.maxDevices}`}</td>
                   <td><StatusBadge status={l.effectiveStatus} /></td>
                   <td>
                     <Link to={`/licenses/${l.id}`} className="btn btn-secondary btn-sm">Detay</Link>
