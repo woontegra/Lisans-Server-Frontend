@@ -148,6 +148,12 @@ export default function LicenseDetailPage() {
             <label>Cihaz</label>
             <span>{license.activeDeviceCount} / {license.maxDevices}</span>
           </div>
+          {license.program.appCode === 'BILIRKISI_DESKTOP' || license.platform ? (
+            <div className="detail-item">
+              <label>Platform</label>
+              <span>{license.platform || 'Belirtilmemiş'}</span>
+            </div>
+          ) : null}
           {license.notes && (
             <div className="detail-item">
               <label>Not</label>

@@ -30,6 +30,7 @@ export default function Licenses() {
     licenseDays: 365,
     expiresAt: '',
     maxDevices: 1,
+    platform: '' as '' | 'WINDOWS' | 'MACOS',
     notes: '',
     sendMail: false,
   });
@@ -62,6 +63,15 @@ export default function Licenses() {
         payload.customerId = form.customerId;
       } else {
         payload.newCustomer = form.newCustomer;
+      }
+
+      const selectedProgram = programs.find((p) => p.id === form.programId);
+      if (selectedProgram?.appCode === 'BILIRKISI_DESKTOP') {
+        if (form.platform !== 'WINDOWS' && form.platform !== 'MACOS') {
+          setError('Bilirkişi Desktop lisansı için platform WINDOWS veya MACOS seçilmelidir');
+          return;
+        }
+        payload.platform = form.platform;
       }
 
       if (form.dateMode === 'days') {
@@ -168,6 +178,7 @@ export default function Licenses() {
                     programId: e.target.value,
                     licenseDays: prog?.defaultLicenseDays || 365,
                     maxDevices: prog?.defaultMaxDevices || 1,
+                    platform: prog?.appCode === 'BILIRKISI_DESKTOP' ? form.platform : '',
                   });
                 }}
                 required
@@ -211,6 +222,21 @@ export default function Licenses() {
                 />
               </div>
             )}
+
+            {programs.find((p) => p.id === form.programId)?.appCode === 'BILIRKISI_DESKTOP' ? (
+              <div className="form-group">
+                <label>Platform</label>
+                <select
+                  value={form.platform}
+                  onChange={(e) => setForm({ ...form, platform: e.target.value as '' | 'WINDOWS' | 'MACOS' })}
+                  required
+                >
+                  <option value="">Seçin...</option>
+                  <option value="WINDOWS">Windows</option>
+                  <option value="MACOS">macOS</option>
+                </select>
+              </div>
+            ) : null}
 
             <div className="form-group">
               <label>Maksimum Cihaz</label>

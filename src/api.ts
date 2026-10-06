@@ -174,6 +174,7 @@ export interface LicenseEvent {
 export interface LicenseDetail extends LicenseListItem {
   startsAt: string;
   notes?: string;
+  platform?: string | null;
   source: string;
   devices: LicenseDevice[];
   events: LicenseEvent[];
@@ -188,6 +189,7 @@ export interface CreateLicenseData {
   licenseDays?: number;
   maxDevices?: number;
   notes?: string;
+  platform?: 'WINDOWS' | 'MACOS';
   sendMail?: boolean;
   downloadUrl?: string;
 }
