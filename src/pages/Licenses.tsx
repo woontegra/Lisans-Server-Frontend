@@ -25,7 +25,10 @@ export default function Licenses() {
   const [status, setStatus] = useState('');
   const [showForm, setShowForm] = useState(false);
   const [error, setError] = useState('');
+  const [submitting, setSubmitting] = useState(false);
   const [createdCreds, setCreatedCreds] = useState<{
+    licenseId: string;
+    customerEmail: string;
     licenseKey: string;
     activationPassword: string;
     warning: string;
@@ -43,7 +46,6 @@ export default function Licenses() {
     maxDevices: 1,
     platform: '' as '' | 'WINDOWS' | 'MACOS',
     notes: '',
-    sendMail: false,
   });
 
   const load = () => {
@@ -61,13 +63,13 @@ export default function Licenses() {
 
   const handleCreate = async (e: FormEvent) => {
     e.preventDefault();
+    if (submitting) return;
     setError('');
     try {
       const payload: Parameters<typeof api.createLicense>[0] = {
         programId: form.programId,
         maxDevices: form.maxDevices,
         notes: form.notes || undefined,
-        sendMail: form.sendMail,
       };
 
       if (form.customerMode === 'existing') {
@@ -92,8 +94,11 @@ export default function Licenses() {
         payload.expiresAt = form.expiresAt;
       }
 
+      setSubmitting(true);
       const result = await api.createLicense(payload);
       setCreatedCreds({
+        licenseId: result.license.id,
+        customerEmail: result.license.customer.email,
         licenseKey: result.license.licenseKey,
         activationPassword: result.activationPassword,
         warning: result.warning,
@@ -103,8 +108,12 @@ export default function Licenses() {
       load();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Hata');
+    } finally {
+      setSubmitting(false);
     }
   };
+
+  const mailSent = createdCreds?.mailResult?.sent === true;
 
   return (
     <div>
@@ -118,21 +127,29 @@ export default function Licenses() {
       {error && <div className="alert alert-error">{error}</div>}
 
       {createdCreds && (
-        <div className="alert alert-warning">
-          <strong>Lisans oluşturuldu!</strong>
+        <div className={`alert ${mailSent ? 'alert-success' : 'alert-warning'}`}>
+          {mailSent ? (
+            <strong>Lisans oluşturuldu ve lisans bilgileri {createdCreds.customerEmail} adresine e-posta ile gönderildi.</strong>
+          ) : (
+            <>
+              <strong>Lisans oluşturuldu ancak e-posta gönderilemedi.</strong>
+              <p>
+                Hata: {createdCreds.mailResult?.error || 'Bilinmeyen hata'}. Lisansı yeniden oluşturmayın; lisans detayından
+                aşağıdaki aktivasyon şifresiyle maili tekrar gönderebilirsiniz.
+              </p>
+            </>
+          )}
           <div className="credential-box">
             <div className="item"><strong>Lisans Anahtarı:</strong> {createdCreds.licenseKey}</div>
             <div className="item"><strong>Aktivasyon Şifresi:</strong> {createdCreds.activationPassword}</div>
           </div>
           <p>{createdCreds.warning}</p>
-          {createdCreds.mailResult ? (
-            <p>
-              {createdCreds.mailResult.sent
-                ? 'Lisans maili müşteriye gönderildi.'
-                : `Lisans maili gönderilemedi: ${createdCreds.mailResult.error || 'Bilinmeyen hata'}`}
-            </p>
-          ) : null}
-          <button className="btn btn-secondary btn-sm" onClick={() => setCreatedCreds(null)}>Kapat</button>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <Link className={`btn btn-sm ${mailSent ? 'btn-secondary' : 'btn-primary'}`} to={`/licenses/${createdCreds.licenseId}`}>
+              Lisans detayına git
+            </Link>
+            <button className="btn btn-secondary btn-sm" onClick={() => setCreatedCreds(null)}>Kapat</button>
+          </div>
         </div>
       )}
 
@@ -273,18 +290,13 @@ export default function Licenses() {
               <textarea value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} rows={2} />
             </div>
 
-            <div className="form-group">
-              <label>
-                <input
-                  type="checkbox"
-                  checked={form.sendMail}
-                  onChange={(e) => setForm({ ...form, sendMail: e.target.checked })}
-                />{' '}
-                Mail gönder
-              </label>
-            </div>
+            <p style={{ fontSize: 13, color: '#666', marginBottom: 12 }}>
+              Lisans bilgileri ve kurulum bağlantısı müşterinin e-posta adresine otomatik gönderilir.
+            </p>
 
-            <button type="submit" className="btn btn-primary">Lisans Oluştur</button>
+            <button type="submit" className="btn btn-primary" disabled={submitting}>
+              {submitting ? 'Oluşturuluyor…' : 'Lisans Oluştur'}
+            </button>
           </form>
         </div>
       )}

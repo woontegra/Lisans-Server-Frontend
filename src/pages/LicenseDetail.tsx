@@ -21,6 +21,7 @@ const EVENT_LABELS: Record<string, string> = {
   PASSWORD_REGENERATED: 'Şifre Yenilendi',
   MAIL_SENT: 'Mail Gönderildi',
   VALIDATION_FAILED: 'Doğrulama Başarısız',
+  LICENSE_DELETED: 'Lisans Silindi',
 };
 
 export default function LicenseDetailPage() {
@@ -31,6 +32,7 @@ export default function LicenseDetailPage() {
   const [extendDays, setExtendDays] = useState(365);
   const [newPassword, setNewPassword] = useState<string | null>(null);
   const [mailPassword, setMailPassword] = useState('');
+  const [isSuperAdmin, setIsSuperAdmin] = useState(false);
 
   const load = () => {
     if (!id) return;
@@ -38,6 +40,29 @@ export default function LicenseDetailPage() {
   };
 
   useEffect(() => { load(); }, [id]);
+  useEffect(() => {
+    api.me().then((me) => setIsSuperAdmin(me.isSuperAdmin === true)).catch(() => setIsSuperAdmin(false));
+  }, []);
+
+  const handleDelete = async () => {
+    if (!id || !license) return;
+    const warning =
+      'Lisansı Sil\n\n' +
+      'Bu işlem GERİ ALINAMAZ. Müşterinin bu lisansla erişimi kalıcı olarak iptal edilir: ' +
+      'lisans aktive edilemez, doğrulanamaz ve yenilenemez. Lisans ana listeden kaldırılır; ' +
+      'denetim geçmişi korunur.\n\nDevam etmek istiyor musunuz?';
+    if (!confirm(warning)) return;
+    const typed = prompt(`Onaylamak için lisans anahtarını yazın:\n${license.licenseKey}`);
+    if (typed === null) return;
+    try {
+      await api.deleteLicense(id, typed);
+      setError('');
+      setMessage('Lisans silindi. Erişim kalıcı olarak iptal edildi.');
+      load();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Lisans silinemedi');
+    }
+  };
 
   const handleExtend = async () => {
     if (!id) return;
@@ -106,6 +131,14 @@ export default function LicenseDetailPage() {
 
       {error && <div className="alert alert-error">{error}</div>}
       {message && <div className="alert alert-success">{message}</div>}
+
+      {license.deletedAt && (
+        <div className="alert alert-error">
+          <strong>Bu lisans silindi.</strong> {new Date(license.deletedAt).toLocaleString('tr-TR')}
+          {license.deletedByEmail ? ` — ${license.deletedByEmail}` : ''}. Erişim kalıcı olarak iptal edildi; kayıt
+          yalnızca denetim için gösteriliyor.
+        </div>
+      )}
 
       {newPassword && (
         <div className="alert alert-warning">
@@ -187,6 +220,7 @@ export default function LicenseDetailPage() {
         </div>
       </div>
 
+      {!license.deletedAt && (
       <div className="card">
         <h2 style={{ marginBottom: 16, fontSize: 16 }}>İşlemler</h2>
         <div className="actions">
@@ -216,6 +250,31 @@ export default function LicenseDetailPage() {
           <button className="btn btn-primary btn-sm" onClick={handleSendMail}>Mail Gönder</button>
         </div>
       </div>
+      )}
+
+      {isSuperAdmin && !license.deletedAt && (
+        <div className="card">
+          <h2 style={{ marginBottom: 8, fontSize: 16 }}>Lisansı Sil</h2>
+          <p style={{ marginBottom: 12 }}>
+            Geri alınamaz. Müşterinin erişimi kalıcı olarak iptal edilir; lisans ana listeden kaldırılır, olay geçmişi
+            korunur. Geçici durdurma için "Pasif Yap" kullanın.
+          </p>
+          {license.deletionBlockers.length > 0 && (
+            <ul style={{ marginBottom: 12, paddingLeft: 20 }}>
+              {license.deletionBlockers.map((b) => (
+                <li key={b.code}>{b.message}</li>
+              ))}
+            </ul>
+          )}
+          <button
+            className="btn btn-danger btn-sm"
+            onClick={handleDelete}
+            disabled={license.deletionBlockers.length > 0}
+          >
+            Lisansı Sil
+          </button>
+        </div>
+      )}
 
       <div className="card">
         <h2 style={{ marginBottom: 16, fontSize: 16 }}>Cihazlar</h2>

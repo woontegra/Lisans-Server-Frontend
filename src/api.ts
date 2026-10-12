@@ -53,7 +53,7 @@ export const api = {
       return data;
     }),
 
-  me: () => request<{ id: string; email: string; name: string }>('/me'),
+  me: () => request<{ id: string; email: string; name: string; isSuperAdmin: boolean }>('/me'),
 
   getDashboard: () =>
     request<{
@@ -112,6 +112,12 @@ export const api = {
     request<{ sent: boolean; error?: string }>(`/licenses/${id}/send-mail`, {
       method: 'POST',
       body: JSON.stringify({ activationPassword, downloadUrl }),
+    }),
+
+  deleteLicense: (id: string, confirmLicenseKey: string) =>
+    request<{ success: boolean; deletedAt: string }>(`/licenses/${id}`, {
+      method: 'DELETE',
+      body: JSON.stringify({ confirmLicenseKey }),
     }),
 };
 
@@ -178,6 +184,9 @@ export interface LicenseDetail extends LicenseListItem {
   source: string;
   devices: LicenseDevice[];
   events: LicenseEvent[];
+  deletedAt?: string | null;
+  deletedByEmail?: string | null;
+  deletionBlockers: { code: string; message: string }[];
 }
 
 export interface CreateLicenseData {
@@ -190,7 +199,6 @@ export interface CreateLicenseData {
   maxDevices?: number;
   notes?: string;
   platform?: 'WINDOWS' | 'MACOS';
-  sendMail?: boolean;
   downloadUrl?: string;
 }
 
