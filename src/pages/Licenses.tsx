@@ -10,6 +10,12 @@ function StatusBadge({ status }: { status: string }) {
   return <span className={`badge ${cls}`}>{label}</span>;
 }
 
+/** Admin formunda işletim sistemi seçimi zorunlu olan programlar ve eksik seçim mesajları. */
+const PLATFORM_REQUIRED_APP_CODES: Record<string, string> = {
+  BILIRKISI_DESKTOP: 'Bilirkişi Desktop lisansı için platform WINDOWS veya MACOS seçilmelidir',
+  MUVEKKIL_KASA_DESKTOP: 'Müvekkil Kasa Defteri Desktop lisansı için işletim sistemi (Windows veya macOS) seçilmelidir',
+};
+
 export default function Licenses() {
   const [licenses, setLicenses] = useState<LicenseListItem[]>([]);
   const [programs, setPrograms] = useState<Program[]>([]);
@@ -19,7 +25,12 @@ export default function Licenses() {
   const [status, setStatus] = useState('');
   const [showForm, setShowForm] = useState(false);
   const [error, setError] = useState('');
-  const [createdCreds, setCreatedCreds] = useState<{ licenseKey: string; activationPassword: string; warning: string } | null>(null);
+  const [createdCreds, setCreatedCreds] = useState<{
+    licenseKey: string;
+    activationPassword: string;
+    warning: string;
+    mailResult?: { sent: boolean; error?: string };
+  } | null>(null);
 
   const [form, setForm] = useState({
     customerMode: 'existing' as 'existing' | 'new',
@@ -66,9 +77,10 @@ export default function Licenses() {
       }
 
       const selectedProgram = programs.find((p) => p.id === form.programId);
-      if (selectedProgram?.appCode === 'BILIRKISI_DESKTOP') {
+      const platformError = selectedProgram ? PLATFORM_REQUIRED_APP_CODES[selectedProgram.appCode] : undefined;
+      if (platformError) {
         if (form.platform !== 'WINDOWS' && form.platform !== 'MACOS') {
-          setError('Bilirkişi Desktop lisansı için platform WINDOWS veya MACOS seçilmelidir');
+          setError(platformError);
           return;
         }
         payload.platform = form.platform;
@@ -85,6 +97,7 @@ export default function Licenses() {
         licenseKey: result.license.licenseKey,
         activationPassword: result.activationPassword,
         warning: result.warning,
+        mailResult: result.mailResult,
       });
       setShowForm(false);
       load();
@@ -112,6 +125,13 @@ export default function Licenses() {
             <div className="item"><strong>Aktivasyon Şifresi:</strong> {createdCreds.activationPassword}</div>
           </div>
           <p>{createdCreds.warning}</p>
+          {createdCreds.mailResult ? (
+            <p>
+              {createdCreds.mailResult.sent
+                ? 'Lisans maili müşteriye gönderildi.'
+                : `Lisans maili gönderilemedi: ${createdCreds.mailResult.error || 'Bilinmeyen hata'}`}
+            </p>
+          ) : null}
           <button className="btn btn-secondary btn-sm" onClick={() => setCreatedCreds(null)}>Kapat</button>
         </div>
       )}
@@ -178,7 +198,7 @@ export default function Licenses() {
                     programId: e.target.value,
                     licenseDays: prog?.defaultLicenseDays || 365,
                     maxDevices: prog?.defaultMaxDevices || 1,
-                    platform: prog?.appCode === 'BILIRKISI_DESKTOP' ? form.platform : '',
+                    platform: prog && PLATFORM_REQUIRED_APP_CODES[prog.appCode] ? form.platform : '',
                   });
                 }}
                 required
@@ -189,6 +209,21 @@ export default function Licenses() {
                 ))}
               </select>
             </div>
+
+            {PLATFORM_REQUIRED_APP_CODES[programs.find((p) => p.id === form.programId)?.appCode ?? ''] ? (
+              <div className="form-group">
+                <label>İşletim Sistemi</label>
+                <select
+                  value={form.platform}
+                  onChange={(e) => setForm({ ...form, platform: e.target.value as '' | 'WINDOWS' | 'MACOS' })}
+                  required
+                >
+                  <option value="">Seçin...</option>
+                  <option value="WINDOWS">Windows</option>
+                  <option value="MACOS">macOS</option>
+                </select>
+              </div>
+            ) : null}
 
             <div className="form-group">
               <label>Süre Belirleme</label>
@@ -222,21 +257,6 @@ export default function Licenses() {
                 />
               </div>
             )}
-
-            {programs.find((p) => p.id === form.programId)?.appCode === 'BILIRKISI_DESKTOP' ? (
-              <div className="form-group">
-                <label>Platform</label>
-                <select
-                  value={form.platform}
-                  onChange={(e) => setForm({ ...form, platform: e.target.value as '' | 'WINDOWS' | 'MACOS' })}
-                  required
-                >
-                  <option value="">Seçin...</option>
-                  <option value="WINDOWS">Windows</option>
-                  <option value="MACOS">macOS</option>
-                </select>
-              </div>
-            ) : null}
 
             <div className="form-group">
               <label>Maksimum Cihaz</label>
